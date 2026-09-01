@@ -1,0 +1,6842 @@
+---
+API: 3
+OpenSesame: 4.1.19
+Platform: nt
+---
+set width 1920
+set title "New experiment"
+set subject_parity even
+set subject_nr 0
+set start experiment
+set sound_sample_size -16
+set sound_freq 48000
+set sound_channels 2
+set sound_buf_size 1024
+set sampler_backend legacy
+set round_decimals 2
+set mouse_backend xpyriment
+set keyboard_backend legacy
+set height 1080
+set fullscreen no
+set form_clicks no
+set foreground white
+set font_underline no
+set font_size 18
+set font_italic False
+set font_family mono
+set font_bold False
+set experiment_path "C:\\Users\\ASUS\\Downloads"
+set disable_garbage_collection False
+set description "The main experiment item"
+set color_backend legacy
+set clock_backend legacy
+set canvas_backend xpyriment
+set background "#3d3846"
+
+define sequence experiment
+	set flush_keyboard yes
+	set description "Runs a number of items in sequence"
+	run participant_form_fix True
+	run logger True
+	run practice_plus_fix True
+	run plus_fix True
+	run practice_minus_fix True
+	run minus_fix True
+	run practice_switch_fix True
+	run switch_fix True
+
+define sketchpad instruction_ui
+	set duration keypress
+	set description "Displays stimuli"
+	draw textline center=1 color=white font_bold=no font_family=sans font_italic=no font_size=30 html=yes show_if=True text="Selamat datang!<br /><br />Di bawah ini, Anda dapat melihat rangkaian angka.<br />Tugas Anda adalah MENAMBAHKAN 3 ke setiap angka.<br />Anda dapat mengetikkan jawaban ke dalam kotak yang tersedia.<br />Gunakan MOUSE KOMPUTER untuk berpindah ke kotak selanjutnya.<br /><br />Anda harus menjawab SECEPAT dan SEKURAT mungkin.<br /><br />Di bawah ini, Anda dapat berlatih mengerjakan tugas terlebih dahulu. <br />" x=12 y=-92 z_index=0
+
+define inline_script logger
+	set description "Executes Python code"
+	set _run ""
+	___prepare__
+	import csv
+	import os
+	
+	## LOGGER SETTINGS ##
+	
+	log_folder = r'D:\WORK\Projects\Praktikum Psikog - Plus minus task'
+	
+	os.makedirs(
+	    log_folder,
+	    exist_ok=True
+	)
+	
+	## FILE NAME ##
+	
+	filename = f'subject-{var.subject_nr}.csv'
+	
+	log_path = os.path.join(
+	    log_folder,
+	    filename
+	)
+	
+	## WRITE CSV ##
+	
+	with open(
+	    log_path,
+	    'w',
+	    newline='',
+	    encoding='utf-8'
+	) as log_file:
+	
+	    writer = csv.writer(log_file)
+	
+	    writer.writerow([
+	        'Name',
+	        'NIU',
+	        'Class',
+	        'StartTime',
+	        'Procedure',
+	        'Task',
+	        'number',
+	        'answers',
+	        'answer_times',
+	        'accuracy',
+	        'EndTime'
+	    ])
+	
+	
+	## LOGGER FUNCTION ##
+	
+	def log_block(
+	    start_time,
+	    procedure,
+	    task,
+	    numbers,
+	    answers,
+	    answer_times,
+	    accuracy,
+	    end_time
+	):
+	
+	    with open(
+	        log_path,
+	        'a',
+	        newline='',
+	        encoding='utf-8'
+	    ) as log_file:
+	
+	        writer = csv.writer(log_file)
+	
+	        writer.writerow([
+	            var.participant_name,
+	            var.niu,
+	            var.kelas,
+	                        
+	            f'{start_time:.2f}',
+	
+	            procedure,
+	
+	            task,
+	
+	            '[' + ' '.join(
+	                str(number)
+	                for number in numbers
+	            ) + ']',
+	
+	            '[' + ' '.join(
+	                'None' if answer == ''
+	                else str(answer)
+	                for answer in answers
+	            ) + ']',
+	
+	            '[' + ' '.join(
+	                'None' if time is None
+	                else f'{time:.2f}'
+	                for time in answer_times
+	            ) + ']',
+	
+	            accuracy,
+	
+	            f'{end_time:.2f}'
+	        ])
+	__end__
+
+define inline_script minus
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ###
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=0)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	hover_padding_x = 5
+	hover_padding_y = 7
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES ##
+	
+	boxes = []
+	
+	for box_x in [-275, -25, 225]:
+	
+	    for i in range(10):
+	        box_y = -300 + (i * 50)
+	        text_y = -280 + (i * 50)
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	    box['question'] = str(number_list[i])
+	    box['answer_key'] = str(int(box['question']) - 3)
+	
+	## SHARED STATE ## 
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	    
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = (
+	            box['x'] - box_w/2 - hover_padding_x
+	            <= mouse_x
+	            <= box['x'] + box_w/2 + hover_padding_x
+	
+	            and
+	
+	            box['y'] - box_h/2 - hover_padding_y
+	            <= mouse_y
+	            <= box['y'] + box_h/2 + hover_padding_y
+	        )
+	
+	
+	    # update button hover
+	    feedback_hover = (
+	
+	        feedback_x - button_w/2
+	        <= mouse_x
+	        <= feedback_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	    done_hover = (
+	
+	        done_x - button_w/2
+	        <= mouse_x
+	        <= done_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	
+	    ## MOUSE CLICK ##
+	
+	    buttons = my_mouse.get_pressed()
+	
+	    if buttons[0]:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	            
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	            
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	            
+	    ## KEYBOARD INPUT ##
+	
+	    key = None
+	    if not submitted and active_box is not None:
+	        key, key_time = my_keyboard.get_key()
+	        box = boxes[active_box]
+	
+	        # number input
+	        if key in [
+	            '0', '1', '2', '3', '4',
+	            '5', '6', '7', '8', '9'
+	        ]:
+	            if len(box['number']) < max_digits:
+	                # record only the first digit typed in this box
+	                if box['number'] == '':
+	                    answer_times[active_box] = clock.time() / 1000
+	                box['number'] += key
+	
+	        # backspace
+	        elif key == 'backspace':
+	            box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	    
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=True
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=True
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=True
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=True
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    # text
+	    my_canvas.text(
+	        text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'white'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Main',
+	            task='minus',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script minus_fix
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ###
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=300)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES ##
+	
+	boxes = []
+	
+	for box_x in [-275, -25, 225]:
+	
+	    for i in range(10):
+	        box_y = -300 + (i * 50)
+	        text_y = -280 + (i * 50)
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	    box['question'] = str(number_list[i])
+	    box['answer_key'] = str(int(box['question']) - 3)
+	
+	## SHARED STATE ## 
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	    
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	prev_button_state = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	
+	## HELPER: hitbox check (shared by boxes + buttons) ##
+	
+	def in_box(mx, my, cx, cy, w, h, pad_x=0, pad_y=0):
+	    return (
+	        cx - w/2 - pad_x <= mx <= cx + w/2 + pad_x
+	        and
+	        cy - h/2 - pad_y <= my <= cy + h/2 + pad_y
+	    )
+	
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = in_box(
+	            mouse_x, mouse_y,
+	            box['x'], box['y'],
+	            box_w, box_h,
+	            hover_padding_x, hover_padding_y
+	        )
+	
+	    # update button hover
+	    feedback_hover = in_box(
+	        mouse_x, mouse_y,
+	        feedback_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    done_hover = in_box(
+	        mouse_x, mouse_y,
+	        done_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    ## MOUSE CLICK (edge-triggered) ##
+	
+	    buttons = my_mouse.get_pressed()
+	    click = buttons[0] and not prev_button_state
+	    prev_button_state = buttons[0]
+	
+	    if click:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	
+	    ## KEYBOARD INPUT ##
+	    # timeout=0 is non-blocking, so it's safe to drain every key
+	    # queued this frame instead of picking up just one.
+	
+	    keyboard_active = (active_box is not None) and (not submitted)
+	
+	    if keyboard_active:
+	        box = boxes[active_box]
+	
+	        while True:
+	
+	            key, key_time = my_keyboard.get_key()
+	
+	            if key is None:
+	                break
+	
+	            # number input
+	            if key in [
+	                '0', '1', '2', '3', '4',
+	                '5', '6', '7', '8', '9'
+	            ]:
+	                if len(box['number']) < max_digits:
+	                    # record only the first digit typed in this box
+	                    if box['number'] == '':
+	                        answer_times[active_box] = clock.time() / 1000
+	                    box['number'] += key
+	
+	            # backspace
+	            elif key == 'backspace':
+	                box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	    
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=False
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=False
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=False
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=False
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'black'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    ## THROTTLE WHEN KEYBOARD ISN'T ACTIVE ##
+	    if not keyboard_active:
+	        clock.sleep(8)
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Main',
+	            task='minus',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script new_1_inline_script
+	set description "Executes Python code"
+	___run__
+	import os
+	
+	experiment_name = os.path.splitext(
+	    os.path.basename(var.experiment_file)
+	)[0]
+	
+	log_folder = os.path.join(
+	    var.experiment_path,
+	    'data',
+	    experiment_name
+	)
+	
+	os.makedirs(log_folder, exist_ok=True)
+	
+	filename = 'LOGGER_TEST_123456.txt'
+	
+	log_path = os.path.join(
+	    log_folder,
+	    filename
+	)
+	
+	print("LOGGER PATH:", log_path)
+	print("LOGGER START")
+	
+	with open(log_path, 'w', encoding='utf-8') as f:
+	    f.write('TEST TEST TEST\n')
+	    f.flush()
+	
+	print("LOGGER FINISHED")
+	__end__
+	set _prepare ""
+
+define inline_script new_inline_script
+	set description "Executes Python code"
+	___run__
+	my_keyboard = Keyboard(timeout=5000)
+	
+	my_canvas = Canvas()
+	
+	my_canvas.text(
+	    text='Tekan keyboard...',
+	    center=True,
+	    x=0,
+	    y=0,
+	    color='white',
+	    font_size=32
+	)
+	
+	my_canvas.show()
+	
+	key, time = my_keyboard.get_key()
+	
+	print('KEY:', repr(key))
+	print('TIME:', time)
+	__end__
+	set _prepare ""
+
+define sketchpad newboxsize_ui
+	# no 1
+	# no 2
+	set start_response_interval no
+	set reset_variables no
+	set duration keypress
+	set description "Displays stimuli"
+	draw textline center=1 color="#aaaaff" font_bold=no font_family=sans font_italic=no font_size=29 html=yes show_if=True text=40 x=-418 y=-96 z_index=0
+	draw rect color="#aaaaff" fill=1 h=40 penwidth=1 show_if=True w=60 x=-392 y=-116 z_index=0
+	draw textline center=1 color="#aaaaff" font_bold=no font_family=sans font_italic=no font_size=22 html=yes show_if=True text=correct x=-289 y=-96 z_index=0
+	draw textline center=1 color="#000000" font_bold=no font_family=sans font_italic=no font_size=30 html=yes show_if=True text=25 x=-362 y=-96 z_index=0
+
+define inline_script participant_form
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ##
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=10)
+	my_canvas = Canvas()
+	
+	
+	## SHARED SETTINGS ##
+	
+	# Input boxes
+	box_w = 400
+	box_h = 44
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	
+	caret_color = '#D3D3D3'
+	
+	label_font_size = 29
+	input_font_size = 26
+	title_font_size = 34
+	button_font_size = 29
+	caret_font_size = 33
+	
+	
+	## BUTTON SETTINGS ##
+	button_w = 192
+	button_h = 40
+	
+	button_x = -100
+	button_y = 220
+	
+	button_text_x = -5
+	button_text_y = 240
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	
+	
+	## FORM FIELDS ##
+	fields = [
+	
+	    {
+	        'name': 'name',
+	        'label': 'Nama',
+	        'x': -130,
+	        'y': -90,
+	        'text_x': 80,
+	        'text_y': -80,
+	        'max_length': 40
+	    },
+	
+	    {
+	        'name': 'niu',
+	        'label': 'NIU',
+	        'x': -130,
+	        'y': -10,
+	        'text_x': 80,
+	        'text_y': 0,
+	        'max_length': 20
+	    },
+	
+	    {
+	        'name': 'kelas',
+	        'label': 'Kelas',
+	        'x': -130,
+	        'y': 70,
+	        'text_x': 80,
+	        'text_y': 80,
+	        'max_length': 20
+	    }
+	
+	]
+	
+	
+	## SHARED STATE ##
+	
+	for field in fields:
+	
+	    field['value'] = ''
+	    field['hover'] = False
+	    field['typing'] = False
+	    field['color'] = idle_color
+	
+	
+	## GLOBAL STATE ##
+	
+	active_field = None
+	start_clicked = False
+	start_hover = False
+	
+	## MAIN LOOP ##
+	
+	while True:
+	
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	
+	    # update field hover
+	    for field in fields:
+	
+	        field['hover'] = (
+	
+	            field['x'] - box_w/2 - hover_padding_x
+	            <= mouse_x
+	            <= field['x'] + box_w/2 + hover_padding_x
+	
+	            and
+	
+	            field['y'] - box_h/2 - hover_padding_y
+	            <= mouse_y
+	            <= field['y'] + box_h/2 + hover_padding_y
+	
+	        )
+	
+	    # update button hover
+	    start_hover = (
+	
+	        button_x - button_w/2
+	        <= mouse_x
+	        <= button_x + button_w/2
+	
+	        and
+	
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	
+	    # mouse click
+	
+	    buttons = my_mouse.get_pressed()
+	
+	    if buttons[0]:
+	
+	        # START BUTTON
+	
+	        if start_hover:
+	            start_clicked = True
+	
+	            for field in fields:
+	                field['typing'] = False
+	
+	        # RESPONSE FIELDS
+	
+	        else:
+	            active_field = None
+	
+	            for field in fields:
+	                field['typing'] = False
+	
+	            for i, field in enumerate(fields):
+	                if field['hover']:
+	                    active_field = i
+	                    field['typing'] = True
+	
+	                    break
+	
+	
+	    # keyboard input
+	
+	    key = None
+	
+	    if active_field is not None and not start_clicked:
+	
+	        key, key_time = my_keyboard.get_key()
+	
+	        field = fields[active_field]
+	
+	        if key is not None:
+	
+	            # letters / numbers
+	            if len(key) == 1 and key.isalnum():
+	                field['value'] += key
+	
+	            # space
+	            elif key == 'space':
+	                field['value'] += ' '
+	
+	            # BACKSPACE
+	            elif key == 'backspace':
+	                field['value'] = field['value'][:-1]
+	
+	    ## UPDATE FIELD COLORS
+	    for field in fields:
+	        
+	        if field['typing']:
+	            field['color'] = active_color
+	
+	        elif field['hover']:
+	            field['color'] = hover_color
+	
+	        else:
+	            field['color'] = idle_color
+	
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # title
+	    my_canvas.text(
+	        text='Praktikum Psikologi Kognitif',
+	        center=True,
+	        x=0,
+	        y=-210,
+	        color='white',
+	        font_family='sans',
+	        font_size=title_font_size,
+	        html=True
+	    )
+	
+	
+	    # form fields
+	    for field in fields:
+	        
+	        # label
+	        my_canvas.text(
+	            text=field['label'],
+	            center=True,
+	            x=-200,
+	            y=field['y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=label_font_size,
+	            html=True
+	        )
+	
+	        # input box
+	        my_canvas.rect(
+	            x=field['x']-18,
+	            y=field['y']-18,
+	            w=box_w,
+	            h=box_h,
+	            color=field['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed text
+	        my_canvas.text(
+	            text=field['value'],
+	            center=True,
+	            x=field['text_x']-30,
+	            y=field['text_y'] -5,
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=True
+	        )
+	
+	        # caret
+	        if field['typing']:
+	
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                # approximate text width
+	                text_width = 0
+	
+	                for char in field['value']:
+	                    if char in 'ilI.,:;!|':
+	                        text_width += 5.5
+	                    elif char in 'mwMW@':
+	                        text_width += 11.5
+	                    elif char == ' ':
+	                        text_width += 6.5
+	                    else:
+	                        text_width += 8.5
+	
+	                text_center_x = field['text_x'] - 30
+	
+	                if field['value'] == '':
+	                    caret_x = text_center_x
+	                else:
+	                    caret_x = (
+	                        text_center_x
+	                        + text_width / 2
+	                        + 5
+	                    )
+	                
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=field['text_y'] - 10,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=True
+	                )
+	
+	    ## START BUTTON ##
+	
+	    if start_clicked:
+	        my_canvas.rect(
+	            x=button_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif start_hover:
+	        my_canvas.rect(
+	            x=button_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=button_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    # button text
+	    my_canvas.text(
+	        text='MULAI TASK',
+	        center=True,
+	        x=button_text_x,
+	        y=button_text_y,
+	        color=(
+	            'black'
+	            if start_clicked
+	            else button_color
+	        ),
+	
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    ## SHOW ##
+	
+	    my_canvas.show()
+	
+	    ## SAVE DATA ##
+	
+	    if start_clicked:
+	
+	        var.participant_name = fields[0]['value']
+	        var.niu = fields[1]['value']
+	        var.kelas = fields[2]['value']
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script participant_form_fix
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ##
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=225)
+	my_canvas = Canvas()
+	
+	
+	## SHARED SETTINGS ##
+	
+	# Input boxes
+	box_w = 400
+	box_h = 44
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	
+	caret_color = '#D3D3D3'
+	
+	label_font_size = 29
+	input_font_size = 26
+	title_font_size = 34
+	button_font_size = 29
+	caret_font_size = 33
+	
+	
+	## BUTTON SETTINGS ##
+	button_w = 192
+	button_h = 40
+	
+	button_x = -100
+	button_y = 220
+	
+	button_text_x = -5
+	button_text_y = 240
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	
+	
+	## FORM FIELDS ##
+	fields = [
+	
+	    {
+	        'name': 'name',
+	        'label': 'Nama',
+	        'x': -130,
+	        'y': -90,
+	        'text_x': 80,
+	        'text_y': -80,
+	        'max_length': 40
+	    },
+	
+	    {
+	        'name': 'niu',
+	        'label': 'NIU',
+	        'x': -130,
+	        'y': -10,
+	        'text_x': 80,
+	        'text_y': 0,
+	        'max_length': 20
+	    },
+	
+	    {
+	        'name': 'kelas',
+	        'label': 'Kelas',
+	        'x': -130,
+	        'y': 70,
+	        'text_x': 80,
+	        'text_y': 80,
+	        'max_length': 20
+	    }
+	
+	]
+	
+	
+	## SHARED STATE ##
+	
+	for field in fields:
+	
+	    field['value'] = ''
+	    field['hover'] = False
+	    field['typing'] = False
+	    field['color'] = idle_color
+	
+	
+	## GLOBAL STATE ##
+	
+	active_field = None
+	start_clicked = False
+	start_hover = False
+	prev_button_state = False
+	
+	
+	## HELPER: hitbox check (shared by fields + button) ##
+	
+	def in_box(mx, my, cx, cy, w, h, pad_x=0, pad_y=0):
+	    return (
+	        cx - w/2 - pad_x <= mx <= cx + w/2 + pad_x
+	        and
+	        cy - h/2 - pad_y <= my <= cy + h/2 + pad_y
+	    )
+	
+	
+	## MAIN LOOP ##
+	
+	while True:
+	
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	
+	    # update field hover
+	    for field in fields:
+	
+	        field['hover'] = in_box(
+	            mouse_x, mouse_y,
+	            field['x'], field['y'],
+	            box_w, box_h,
+	            hover_padding_x, hover_padding_y
+	        )
+	
+	    # update button hover
+	    start_hover = in_box(
+	        mouse_x, mouse_y,
+	        button_x, button_y,
+	        button_w, button_h
+	    )
+	
+	
+	    # mouse click (edge-triggered: only fires on the frame the button goes down)
+	
+	    buttons = my_mouse.get_pressed()
+	    click = buttons[0] and not prev_button_state
+	    prev_button_state = buttons[0]
+	
+	    if click:
+	
+	        # START BUTTON
+	
+	        if start_hover:
+	            start_clicked = True
+	
+	            for field in fields:
+	                field['typing'] = False
+	
+	        # RESPONSE FIELDS
+	
+	        else:
+	            active_field = None
+	
+	            for field in fields:
+	                field['typing'] = False
+	
+	            for i, field in enumerate(fields):
+	                if field['hover']:
+	                    active_field = i
+	                    field['typing'] = True
+	
+	                    break
+	
+	
+	    # keyboard input
+	
+	    key = None
+	
+	    if active_field is not None and not start_clicked:
+	
+	        key, key_time = my_keyboard.get_key()
+	
+	        field = fields[active_field]
+	
+	        if key is not None:
+	
+	            # letters / numbers
+	            if len(key) == 1 and key.isalnum():
+	                field['value'] += key
+	
+	            # space
+	            elif key == 'space':
+	                field['value'] += ' '
+	
+	            # BACKSPACE
+	            elif key == 'backspace':
+	                field['value'] = field['value'][:-1]
+	
+	    ## UPDATE FIELD COLORS
+	    for field in fields:
+	        
+	        if field['typing']:
+	            field['color'] = active_color
+	
+	        elif field['hover']:
+	            field['color'] = hover_color
+	
+	        else:
+	            field['color'] = idle_color
+	
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # title
+	    my_canvas.text(
+	        text='Praktikum Psikologi Kognitif',
+	        center=True,
+	        x=0,
+	        y=-210,
+	        color='white',
+	        font_family='sans',
+	        font_size=title_font_size,
+	        html=False
+	    )
+	
+	
+	    # form fields
+	    for field in fields:
+	        
+	        # label
+	        my_canvas.text(
+	            text=field['label'],
+	            center=True,
+	            x=-200,
+	            y=field['y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=label_font_size,
+	            html=False
+	        )
+	
+	        # input box
+	        my_canvas.rect(
+	            x=field['x']-18,
+	            y=field['y']-18,
+	            w=box_w,
+	            h=box_h,
+	            color=field['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed text
+	        my_canvas.text(
+	            text=field['value'],
+	            center=True,
+	            x=field['text_x']-30,
+	            y=field['text_y'] -5,
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=False
+	        )
+	
+	        # caret
+	        if field['typing']:
+	
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                # approximate text width
+	                text_width = 0
+	
+	                for char in field['value']:
+	                    if char in 'ilI.,:;!|':
+	                        text_width += 5.5
+	                    elif char in 'mwMW@':
+	                        text_width += 11.5
+	                    elif char == ' ':
+	                        text_width += 6.5
+	                    else:
+	                        text_width += 8.5
+	
+	                text_center_x = field['text_x'] - 30
+	
+	                if field['value'] == '':
+	                    caret_x = text_center_x
+	                else:
+	                    caret_x = (
+	                        text_center_x
+	                        + text_width / 2
+	                        + 5
+	                    )
+	                
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=field['text_y'] - 10,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=False
+	                )
+	
+	    ## START BUTTON ##
+	
+	    if start_clicked:
+	        my_canvas.rect(
+	            x=button_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif start_hover:
+	        my_canvas.rect(
+	            x=button_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=button_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    # button text
+	    my_canvas.text(
+	        text='MULAI TASK',
+	        center=True,
+	        x=button_text_x,
+	        y=button_text_y,
+	        color=(
+	            'black'
+	            if start_clicked
+	            else button_color
+	        ),
+	
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    ## SHOW ##
+	
+	    my_canvas.show()
+	
+	    ## THROTTLE WHEN IDLE ##
+	    # No field is active (and keyboard isn't being polled), so give the
+	    # CPU a short break each frame. 8ms is well below human perception
+	    # and does not affect mouse hover/click responsiveness.
+	    if active_field is None:
+	        clock.sleep(8)
+	
+	    ## SAVE DATA ##
+	
+	    if start_clicked:
+	
+	        var.participant_name = fields[0]['value']
+	        var.niu = fields[1]['value']
+	        var.kelas = fields[2]['value']
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script plus
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ###
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=0)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES ##
+	
+	boxes = []
+	
+	for box_x in [-275, -25, 225]:
+	
+	    for i in range(10):
+	        box_y = -300 + (i * 50)
+	        text_y = -280 + (i * 50)
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	    box['question'] = str(number_list[i])
+	    box['answer_key'] = str(int(box['question']) + 3)
+	
+	## SHARED STATE ## 
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	    
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = (
+	            box['x'] - box_w/2 - hover_padding_x
+	            <= mouse_x
+	            <= box['x'] + box_w/2 + hover_padding_x
+	
+	            and
+	
+	            box['y'] - box_h/2 - hover_padding_y
+	            <= mouse_y
+	            <= box['y'] + box_h/2 + hover_padding_y
+	        )
+	
+	
+	    # update button hover
+	    feedback_hover = (
+	
+	        feedback_x - button_w/2
+	        <= mouse_x
+	        <= feedback_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	    done_hover = (
+	
+	        done_x - button_w/2
+	        <= mouse_x
+	        <= done_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	    ## MOUSE CLICK ##
+	
+	    buttons = my_mouse.get_pressed()
+	
+	    if buttons[0]:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	            
+	    ## KEYBOARD INPUT ##
+	
+	    key = None
+	    if not submitted and active_box is not None:
+	        key, key_time = my_keyboard.get_key()
+	        box = boxes[active_box]
+	
+	        # number input
+	        if key in [
+	            '0', '1', '2', '3', '4',
+	            '5', '6', '7', '8', '9'
+	        ]:
+	            if len(box['number']) < max_digits:
+	                # record only the first digit typed in this box
+	                if box['number'] == '':
+	                    answer_times[active_box] = clock.time() / 1000
+	                box['number'] += key
+	                
+	        # backspace
+	        elif key == 'backspace':
+	            box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	    
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=True
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=True
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=True
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=True
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'white'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Main',
+	            task='plus',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script plus_fix
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ###
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=300)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES ##
+	
+	boxes = []
+	
+	for box_x in [-275, -25, 225]:
+	
+	    for i in range(10):
+	        box_y = -300 + (i * 50)
+	        text_y = -280 + (i * 50)
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	    box['question'] = str(number_list[i])
+	    box['answer_key'] = str(int(box['question']) + 3)
+	
+	## SHARED STATE ## 
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	    
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	prev_button_state = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	
+	## HELPER: hitbox check (shared by boxes + buttons) ##
+	
+	def in_box(mx, my, cx, cy, w, h, pad_x=0, pad_y=0):
+	    return (
+	        cx - w/2 - pad_x <= mx <= cx + w/2 + pad_x
+	        and
+	        cy - h/2 - pad_y <= my <= cy + h/2 + pad_y
+	    )
+	
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = in_box(
+	            mouse_x, mouse_y,
+	            box['x'], box['y'],
+	            box_w, box_h,
+	            hover_padding_x, hover_padding_y
+	        )
+	
+	    # update button hover
+	    feedback_hover = in_box(
+	        mouse_x, mouse_y,
+	        feedback_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    done_hover = in_box(
+	        mouse_x, mouse_y,
+	        done_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    ## MOUSE CLICK (edge-triggered) ##
+	
+	    buttons = my_mouse.get_pressed()
+	    click = buttons[0] and not prev_button_state
+	    prev_button_state = buttons[0]
+	
+	    if click:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	
+	    ## KEYBOARD INPUT ##
+	    # timeout=0 is non-blocking, so it's safe to drain every key
+	    # queued this frame instead of picking up just one.
+	
+	    keyboard_active = (active_box is not None) and (not submitted)
+	
+	    if keyboard_active:
+	        box = boxes[active_box]
+	
+	        while True:
+	
+	            key, key_time = my_keyboard.get_key()
+	
+	            if key is None:
+	                break
+	
+	            # number input
+	            if key in [
+	                '0', '1', '2', '3', '4',
+	                '5', '6', '7', '8', '9'
+	            ]:
+	                if len(box['number']) < max_digits:
+	                    # record only the first digit typed in this box
+	                    if box['number'] == '':
+	                        answer_times[active_box] = clock.time() / 1000
+	                    box['number'] += key
+	
+	            # backspace
+	            elif key == 'backspace':
+	                box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	    
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=False
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=False
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=False
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=False
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'black'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    ## THROTTLE WHEN KEYBOARD ISN'T ACTIVE ##
+	    if not keyboard_active:
+	        clock.sleep(8)
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Main',
+	            task='plus',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script practice_minus
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ##
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=0)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES PRACTICE ##
+	
+	boxes = []
+	
+	y_offset = 425
+	for box_x in [-225, -25, 175]:
+	
+	    for i in range(2):
+	        box_y = -320 + (i * 50) + y_offset
+	        text_y = -300 + (i * 50) + y_offset
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	
+	    box['question'] = str(number_list[i])
+	    box['answer_key'] = str(
+	        int(box['question']) - 3
+	    )
+	
+	## SHARED STATE ##
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = (
+	            box['x'] - box_w/2 - hover_padding_x
+	            <= mouse_x
+	            <= box['x'] + box_w/2 + hover_padding_x
+	
+	            and
+	
+	            box['y'] - box_h/2 - hover_padding_y
+	            <= mouse_y
+	            <= box['y'] + box_h/2 + hover_padding_y
+	        )
+	
+	    # update button hover
+	    feedback_hover = (
+	
+	        feedback_x - button_w/2
+	        <= mouse_x
+	        <= feedback_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	    done_hover = (
+	
+	        done_x - button_w/2
+	        <= mouse_x
+	        <= done_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	
+	    ## MOUSE CLICK ##
+	
+	    buttons = my_mouse.get_pressed()
+	
+	    if buttons[0]:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	            
+	    ## KEYBOARD INPUT ##
+	
+	    key = None
+	    if not submitted and active_box is not None:
+	        key, key_time = my_keyboard.get_key()
+	        box = boxes[active_box]
+	
+	        # number input
+	        if key in [
+	            '0', '1', '2', '3', '4',
+	            '5', '6', '7', '8', '9'
+	        ]:
+	            if len(box['number']) < max_digits:
+	                # record only the first digit typed in this box
+	                if box['number'] == '':
+	                    answer_times[active_box] = clock.time() / 1000
+	                box['number'] += key
+	
+	        # backspace
+	        elif key == 'backspace':
+	            box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # INSTRUCTION TEXT
+	
+	    my_canvas.text(
+	        text='Di bawah ini, Anda dapat melihat serangkaian angka.<br />'
+	             'Tugas Anda adalah MENGURANGI 3 setiap angka tersebut.<br />'
+	             'Anda dapat mengetikkan jawaban ke dalam kotak yang tersedia.<br />'
+	             'Gunakan MOUSE KOMPUTER untuk berpindah ke kotak selanjutnya.<br /><br />'
+	             'Anda harus menjawab SECEPAT dan SEAKURAT mungkin.<br /><br />'
+	             'Di bawah ini, Anda dapat berlatih mengerjakan tugas terlebih dahulu.',
+	        center=True,
+	        x=0,
+	        y=-100,
+	        color='white',
+	        font_family='sans',
+	        font_size=30,
+	        html=True
+	    )
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=True
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=True
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=True
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=True
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'black'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Practice',
+	            task='minus',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script practice_minus_fix
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ##
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=225)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES PRACTICE ##
+	
+	boxes = []
+	
+	y_offset = 425
+	for box_x in [-225, -25, 175]:
+	
+	    for i in range(2):
+	        box_y = -320 + (i * 50) + y_offset
+	        text_y = -300 + (i * 50) + y_offset
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	
+	    box['question'] = str(number_list[i])
+	    box['answer_key'] = str(
+	        int(box['question']) - 3
+	    )
+	    
+	## SHARED STATE ##
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	prev_button_state = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	
+	## HELPER: hitbox check (shared by boxes + buttons) ##
+	
+	def in_box(mx, my, cx, cy, w, h, pad_x=0, pad_y=0):
+	    return (
+	        cx - w/2 - pad_x <= mx <= cx + w/2 + pad_x
+	        and
+	        cy - h/2 - pad_y <= my <= cy + h/2 + pad_y
+	    )
+	
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = in_box(
+	            mouse_x, mouse_y,
+	            box['x'], box['y'],
+	            box_w, box_h,
+	            hover_padding_x, hover_padding_y
+	        )
+	
+	    # update button hover
+	    feedback_hover = in_box(
+	        mouse_x, mouse_y,
+	        feedback_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    done_hover = in_box(
+	        mouse_x, mouse_y,
+	        done_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    ## MOUSE CLICK (edge-triggered) ##
+	
+	    buttons = my_mouse.get_pressed()
+	    click = buttons[0] and not prev_button_state
+	    prev_button_state = buttons[0]
+	
+	    if click:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	
+	    ## KEYBOARD INPUT ##
+	    # only poll while a box is actually being typed into
+	
+	    keyboard_active = (active_box is not None) and (not submitted)
+	
+	    if keyboard_active:
+	        box = boxes[active_box]
+	
+	        while True:
+	
+	            key, key_time = my_keyboard.get_key()
+	
+	            if key is None:
+	                break
+	
+	            # number input
+	            if key in [
+	                '0', '1', '2', '3', '4',
+	                '5', '6', '7', '8', '9'
+	            ]:
+	                if len(box['number']) < max_digits:
+	                    # record only the first digit typed in this box
+	                    if box['number'] == '':
+	                        answer_times[active_box] = clock.time() / 1000
+	                    box['number'] += key
+	
+	            # backspace
+	            elif key == 'backspace':
+	                box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # INSTRUCTION TEXT
+	    # (kept html=True — this is the only text block that actually
+	    # uses <br /> markup)
+	
+	    my_canvas.text(
+	        text='Di bawah ini, Anda dapat melihat serangkaian angka.<br />'
+	             'Tugas Anda adalah MENGURANGI 3 setiap angka tersebut.<br />'
+	             'Anda dapat mengetikkan jawaban ke dalam kotak yang tersedia.<br />'
+	             'Gunakan MOUSE KOMPUTER untuk berpindah ke kotak selanjutnya.<br /><br />'
+	             'Anda harus menjawab SECEPAT dan SEAKURAT mungkin.<br /><br />'
+	             'Di bawah ini, Anda dapat berlatih mengerjakan tugas terlebih dahulu.',
+	        center=True,
+	        x=0,
+	        y=-100,
+	        color='white',
+	        font_family='sans',
+	        font_size=30,
+	        html=True
+	    )
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=False
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=False
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=False
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=False
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'black'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    ## THROTTLE WHEN KEYBOARD ISN'T ACTIVE ##
+	    # Same pattern as the form script: give the CPU a short break on
+	    # frames where we're not actively polling the keyboard for typing.
+	    # Mouse hover/click are still checked every frame above, so this
+	    # doesn't affect click/hover responsiveness.
+	    if not keyboard_active:
+	        clock.sleep(8)
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Practice',
+	            task='minus',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script practice_plus
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ##
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=300)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES PRACTICE ##
+	
+	boxes = []
+	
+	y_offset = 425
+	for box_x in [-225, -25, 175]:
+	
+	    for i in range(2):
+	        box_y = -320 + (i * 50) + y_offset
+	        text_y = -300 + (i * 50) + y_offset
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	
+	    box['question'] = str(number_list[i])
+	    box['answer_key'] = str(
+	        int(box['question']) + 3
+	    )
+	
+	## SHARED STATE ##
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = (
+	            box['x'] - box_w/2 - hover_padding_x
+	            <= mouse_x
+	            <= box['x'] + box_w/2 + hover_padding_x
+	
+	            and
+	
+	            box['y'] - box_h/2 - hover_padding_y
+	            <= mouse_y
+	            <= box['y'] + box_h/2 + hover_padding_y
+	        )
+	
+	    # update button hover
+	    feedback_hover = (
+	
+	        feedback_x - button_w/2
+	        <= mouse_x
+	        <= feedback_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	    done_hover = (
+	
+	        done_x - button_w/2
+	        <= mouse_x
+	        <= done_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	    ## MOUSE CLICK ##
+	
+	    buttons = my_mouse.get_pressed()
+	
+	    if buttons[0]:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	            
+	    ## KEYBOARD INPUT ##
+	
+	    key = None
+	    if not submitted and active_box is not None:
+	        key, key_time = my_keyboard.get_key()
+	        box = boxes[active_box]
+	
+	        # number input
+	        if key in [
+	            '0', '1', '2', '3', '4',
+	            '5', '6', '7', '8', '9'
+	        ]:
+	            if len(box['number']) < max_digits:
+	                # record only the first digit typed in this box
+	                if box['number'] == '':
+	                    answer_times[active_box] = clock.time() / 1000
+	                box['number'] += key
+	    
+	        # backspace
+	        elif key == 'backspace':
+	            box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # INSTRUCTION TEXT
+	
+	    my_canvas.text(
+	        text='Selamat datang!<br /><br />'
+	             'Di bawah ini, Anda dapat melihat serangkaian angka.<br />'
+	             'Tugas Anda adalah MENAMBAHKAN 3 ke setiap angka tersebut.<br />'
+	             'Anda dapat mengetikkan jawaban ke dalam kotak yang tersedia.<br />'
+	             'Gunakan MOUSE KOMPUTER untuk berpindah ke kotak selanjutnya.<br /><br />'
+	             'Anda harus menjawab SECEPAT dan SEAKURAT mungkin.<br /><br />'
+	             'Di bawah ini, Anda dapat berlatih mengerjakan tugas terlebih dahulu.',
+	        center=True,
+	        x=0,
+	        y=-100,
+	        color='white',
+	        font_family='sans',
+	        font_size=30,
+	        html=True
+	    )
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=True
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=True
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=True
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=True
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'black'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Practice',
+	            task='plus',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script practice_plus_fix
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ##
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=225)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES PRACTICE ##
+	
+	boxes = []
+	
+	y_offset = 425
+	for box_x in [-225, -25, 175]:
+	
+	    for i in range(2):
+	        box_y = -320 + (i * 50) + y_offset
+	        text_y = -300 + (i * 50) + y_offset
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	
+	    box['question'] = str(number_list[i])
+	    box['answer_key'] = str(
+	        int(box['question']) + 3
+	    )
+	
+	## SHARED STATE ##
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	prev_button_state = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	
+	## HELPER: hitbox check (shared by boxes + buttons) ##
+	
+	def in_box(mx, my, cx, cy, w, h, pad_x=0, pad_y=0):
+	    return (
+	        cx - w/2 - pad_x <= mx <= cx + w/2 + pad_x
+	        and
+	        cy - h/2 - pad_y <= my <= cy + h/2 + pad_y
+	    )
+	
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = in_box(
+	            mouse_x, mouse_y,
+	            box['x'], box['y'],
+	            box_w, box_h,
+	            hover_padding_x, hover_padding_y
+	        )
+	
+	    # update button hover
+	    feedback_hover = in_box(
+	        mouse_x, mouse_y,
+	        feedback_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    done_hover = in_box(
+	        mouse_x, mouse_y,
+	        done_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    ## MOUSE CLICK (edge-triggered) ##
+	
+	    buttons = my_mouse.get_pressed()
+	    click = buttons[0] and not prev_button_state
+	    prev_button_state = buttons[0]
+	
+	    if click:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	
+	    ## KEYBOARD INPUT ##
+	    # only poll while a box is actually being typed into
+	
+	    keyboard_active = (active_box is not None) and (not submitted)
+	
+	    if keyboard_active:
+	        box = boxes[active_box]
+	
+	        while True:
+	
+	            key, key_time = my_keyboard.get_key()
+	
+	            if key is None:
+	                break
+	
+	            # number input
+	            if key in [
+	                '0', '1', '2', '3', '4',
+	                '5', '6', '7', '8', '9'
+	            ]:
+	                if len(box['number']) < max_digits:
+	                    # record only the first digit typed in this box
+	                    if box['number'] == '':
+	                        answer_times[active_box] = clock.time() / 1000
+	                    box['number'] += key
+	
+	            # backspace
+	            elif key == 'backspace':
+	                box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # INSTRUCTION TEXT
+	    # (kept html=True — this is the only text block that actually
+	    # uses <br /> markup)
+	
+	    my_canvas.text(
+	        text='Selamat datang!<br /><br />'
+	             'Di bawah ini, Anda dapat melihat serangkaian angka.<br />'
+	             'Tugas Anda adalah MENAMBAHKAN 3 ke setiap angka tersebut.<br />'
+	             'Anda dapat mengetikkan jawaban ke dalam kotak yang tersedia.<br />'
+	             'Gunakan MOUSE KOMPUTER untuk berpindah ke kotak selanjutnya.<br /><br />'
+	             'Anda harus menjawab SECEPAT dan SEAKURAT mungkin.<br /><br />'
+	             'Di bawah ini, Anda dapat berlatih mengerjakan tugas terlebih dahulu.',
+	        center=True,
+	        x=0,
+	        y=-100,
+	        color='white',
+	        font_family='sans',
+	        font_size=30,
+	        html=True
+	    )
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=False
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=False
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=False
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=False
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'black'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    ## THROTTLE WHEN KEYBOARD ISN'T ACTIVE ##
+	    # Same pattern as the form script: give the CPU a short break on
+	    # frames where we're not actively polling the keyboard for typing.
+	    # Mouse hover/click are still checked every frame above, so this
+	    # doesn't affect click/hover responsiveness.
+	    if not keyboard_active:
+	        clock.sleep(8)
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Practice',
+	            task='plus',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script practice_switch
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ##
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=0)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES PRACTICE ##
+	
+	boxes = []
+	
+	y_offset = 425
+	for box_x in [-225, -25, 175]:
+	
+	    for i in range(2):
+	        box_y = -320 + (i * 50) + y_offset
+	        text_y = -300 + (i * 50) + y_offset
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	    box['question'] = str(number_list[i])
+	
+	    if i % 2 == 0:
+	        box['answer_key'] = str(int(box['question']) + 3)
+	    else:
+	        box['answer_key'] = str(int(box['question']) - 3)
+	
+	## SHARED STATE ##
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = (
+	            box['x'] - box_w/2 - hover_padding_x
+	            <= mouse_x
+	            <= box['x'] + box_w/2 + hover_padding_x
+	
+	            and
+	
+	            box['y'] - box_h/2 - hover_padding_y
+	            <= mouse_y
+	            <= box['y'] + box_h/2 + hover_padding_y
+	        )
+	
+	    # update button hover
+	    feedback_hover = (
+	
+	        feedback_x - button_w/2
+	        <= mouse_x
+	        <= feedback_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	    done_hover = (
+	
+	        done_x - button_w/2
+	        <= mouse_x
+	        <= done_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	    ## MOUSE CLICK ##
+	
+	    buttons = my_mouse.get_pressed()
+	
+	    if buttons[0]:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	            
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	            
+	    ## KEYBOARD INPUT ##
+	
+	    key = None
+	    if not submitted and active_box is not None:
+	        key, key_time = my_keyboard.get_key()
+	        box = boxes[active_box]
+	
+	        # number input
+	        if key in [
+	            '0', '1', '2', '3', '4',
+	            '5', '6', '7', '8', '9'
+	        ]:
+	            if len(box['number']) < max_digits:
+	                # record only the first digit typed in this box
+	                if box['number'] == '':
+	                    answer_times[active_box] = clock.time() / 1000
+	                box['number'] += key
+	
+	        # backspace
+	        elif key == 'backspace':
+	            box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # INSTRUCTION TEXT
+	
+	    my_canvas.text(
+	        text='Di bawah ini, Anda dapat melihat serangkaian angka.<br />'
+	             'Tugas Anda pada angka pertama adalah MENAMBAHKAN 3.<br />'
+	             'Tugas Anda pada angka kedua adalah MENGURANGI 3<br />'
+	             'Tugas Anda pada angka ketiga adalah MENAMBAHKAN 3.<br />'
+	             'Tugas Anda pada angka keempat adalah MENGURANGI 3<br />'
+	             'Untuk seterusnya, Anda perlu BERGANTI-GANTI antara menambahkan dan mengurangi.<br /><br />'
+	             'Anda harus menjawab SECEPAT dan SEAKURAT mungkin.<br /><br />'
+	             'Di bawah ini, Anda dapat berlatih mengerjakan tugas terlebih dahulu.',
+	        center=True,
+	        x=0,
+	        y=-100,
+	        color='white',
+	        font_family='sans',
+	        font_size=30,
+	        html=True
+	    )
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=True
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=True
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=True
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=True
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'black'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Practice',
+	            task='switch',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script practice_switch_fix
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ##
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=225)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES PRACTICE ##
+	
+	boxes = []
+	
+	y_offset = 425
+	for box_x in [-225, -25, 175]:
+	
+	    for i in range(2):
+	        box_y = -320 + (i * 50) + y_offset
+	        text_y = -300 + (i * 50) + y_offset
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	    box['question'] = str(number_list[i])
+	
+	    if i % 2 == 0:
+	        box['answer_key'] = str(int(box['question']) + 3)
+	    else:
+	        box['answer_key'] = str(int(box['question']) - 3)
+	    
+	## SHARED STATE ##
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	prev_button_state = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	
+	## HELPER: hitbox check (shared by boxes + buttons) ##
+	
+	def in_box(mx, my, cx, cy, w, h, pad_x=0, pad_y=0):
+	    return (
+	        cx - w/2 - pad_x <= mx <= cx + w/2 + pad_x
+	        and
+	        cy - h/2 - pad_y <= my <= cy + h/2 + pad_y
+	    )
+	
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = in_box(
+	            mouse_x, mouse_y,
+	            box['x'], box['y'],
+	            box_w, box_h,
+	            hover_padding_x, hover_padding_y
+	        )
+	
+	    # update button hover
+	    feedback_hover = in_box(
+	        mouse_x, mouse_y,
+	        feedback_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    done_hover = in_box(
+	        mouse_x, mouse_y,
+	        done_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    ## MOUSE CLICK (edge-triggered) ##
+	
+	    buttons = my_mouse.get_pressed()
+	    click = buttons[0] and not prev_button_state
+	    prev_button_state = buttons[0]
+	
+	    if click:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	
+	    ## KEYBOARD INPUT ##
+	    # only poll while a box is actually being typed into
+	
+	    keyboard_active = (active_box is not None) and (not submitted)
+	
+	    if keyboard_active:
+	        box = boxes[active_box]
+	
+	        while True:
+	
+	            key, key_time = my_keyboard.get_key()
+	
+	            if key is None:
+	                break
+	
+	            # number input
+	            if key in [
+	                '0', '1', '2', '3', '4',
+	                '5', '6', '7', '8', '9'
+	            ]:
+	                if len(box['number']) < max_digits:
+	                    # record only the first digit typed in this box
+	                    if box['number'] == '':
+	                        answer_times[active_box] = clock.time() / 1000
+	                    box['number'] += key
+	
+	            # backspace
+	            elif key == 'backspace':
+	                box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # INSTRUCTION TEXT
+	    # (kept html=True — this is the only text block that actually
+	    # uses <br /> markup)
+	
+	    my_canvas.text(
+	        text='Di bawah ini, Anda dapat melihat serangkaian angka.<br />'
+	             'Tugas Anda pada angka pertama adalah MENAMBAHKAN 3.<br />'
+	             'Tugas Anda pada angka kedua adalah MENGURANGI 3<br />'
+	             'Tugas Anda pada angka ketiga adalah MENAMBAHKAN 3.<br />'
+	             'Tugas Anda pada angka keempat adalah MENGURANGI 3<br />'
+	             'Untuk seterusnya, Anda perlu BERGANTI-GANTI antara menambahkan dan mengurangi.<br /><br />'
+	             'Anda harus menjawab SECEPAT dan SEAKURAT mungkin.<br /><br />'
+	             'Di bawah ini, Anda dapat berlatih mengerjakan tugas terlebih dahulu.',
+	        center=True,
+	        x=0,
+	        y=-100,
+	        color='white',
+	        font_family='sans',
+	        font_size=30,
+	        html=True
+	    )
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=False
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=False
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=False
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=False
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'black'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    ## THROTTLE WHEN KEYBOARD ISN'T ACTIVE ##
+	    # Same pattern as the form script: give the CPU a short break on
+	    # frames where we're not actively polling the keyboard for typing.
+	    # Mouse hover/click are still checked every frame above, so this
+	    # doesn't affect click/hover responsiveness.
+	    if not keyboard_active:
+	        clock.sleep(8)
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Practice',
+	            task='switch',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script prototype
+	set description "Executes Python code"
+	___run__
+	# =========================
+	# INITIALIZATION
+	# =========================
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	
+	my_keyboard = Keyboard(timeout=0)
+	
+	my_canvas = Canvas()
+	
+	# Posisi dan ukuran kotak
+	x = -512
+	y = -300
+	w = 95
+	h = 44
+	
+	# Tambahan area hover (invisible hitbox)
+	hover_padding_x = 8
+	hover_padding_y = 10
+	
+	# Posisi input angka
+	text_x = -466
+	text_y = -280
+	
+	# Input
+	number = ""
+	
+	typing = False
+	
+	
+	# =========================
+	# MAIN LOOP
+	# =========================
+	
+	while True:
+	
+	    # -------------------------
+	    # Mouse position
+	    # -------------------------
+	
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # Apakah cursor berada di dalam kotak?
+	    hover = (
+	        x - w/2 - hover_padding_x <= mouse_x <= x + w/2 + hover_padding_x and
+	        y - h/2 - hover_padding_y <= mouse_y <= y + h/2 + hover_padding_y
+	    )
+	
+	
+	    # -------------------------
+	    # Mouse click
+	    # -------------------------
+	
+	    buttons = my_mouse.get_pressed()
+	
+	    if buttons[0]:
+	
+	        if hover:
+	            typing = True
+	
+	        else:
+	            typing = False
+	
+	    # -------------------------
+	    # Keyboard input
+	    # -------------------------
+	
+	    if typing:
+	
+	        key, key_time = my_keyboard.get_key()
+	
+	        # Hanya angka 0-9, maksimal 2 digit
+	        if key in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
+	            if len(number) < 2:
+	                number += key
+	
+	        # Backspace
+	        elif key == 'backspace':
+	            number = number[:-1]
+	
+	        # Enter = selesai
+	        elif key in ['return', 'enter']:
+	            break
+	
+	
+	    # =========================
+	    # BOX COLOR
+	    # =========================
+	
+	    # Idle
+	    if not typing and not hover:
+	        color = '#C7B5E3'
+	
+	    # Hover
+	    elif not typing and hover:
+	        color = '#9DD9B8'
+	
+	    # Typing
+	    else:
+	        color = '#70C49A'
+	
+	
+	    # =========================
+	    # DRAW
+	    # =========================
+	
+	    my_canvas.clear()
+	
+	
+	    # -------------------------
+	    # Fixed text: 67
+	    # -------------------------
+	
+	    my_canvas.text(
+	        text='67',
+	        center=True,
+	        x=-544,
+	        y=-280,
+	        color='white',
+	        font_family='sans',
+	        font_size=32,
+	        html=True
+	    )
+	
+	
+	    # -------------------------
+	    # Input box
+	    # -------------------------
+	
+	    my_canvas.rect(
+	        x=x,
+	        y=y,
+	        w=w,
+	        h=h,
+	        color=color,
+	        fill=True,
+	        penwidth=1
+	    )
+	
+	
+	    # -------------------------
+	    # Fixed text: correct
+	    # -------------------------
+	
+	    my_canvas.text(
+	        text='correct',
+	        center=True,
+	        x=-365,
+	        y=-280,
+	        color='white',
+	        font_family='sans',
+	        font_size=25,
+	        html=True
+	    )
+	
+	
+	    # -------------------------
+	    # Participant's number
+	    # -------------------------
+	
+	    my_canvas.text(
+	        text=number,
+	        center=True,
+	        x=text_x,
+	        y=text_y,
+	        color='#000000',
+	        font_family='sans',
+	        font_size=32,
+	        html=True
+	    )
+	
+	
+	    # =========================
+	    # BLINKING CARET
+	    # =========================
+	
+	    if typing:
+	
+	        # Caret berkedip setiap ~500 ms
+	        if (clock.time() // 500) % 2 == 0:
+	
+	            # Posisi caret di sebelah kanan angka
+	            # Jika belum ada angka, mulai dari tengah kotak
+	            if number == "":
+	                caret_x = text_x + 3
+	            else:
+	                caret_x = text_x + 3 + (len(number) * 13)
+	    
+	            my_canvas.text(
+	                text='|',
+	                center=True,
+	                x=caret_x,
+	                y=text_y - 2,
+	                color='#3D8F69',
+	                font_family='sans',
+	                font_size=36,
+	                html=True
+	            )
+	
+	    # -------------------------
+	    # Show canvas
+	    # -------------------------
+	
+	    my_canvas.show()
+	__end__
+	set _prepare ""
+
+define inline_script prototype_multiplequestion
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ###
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=0)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 70
+	box_h = 35
+	hover_padding_x = 9
+	hover_padding_y = 11
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#3D8F69'
+	
+	question_font_size = 30
+	input_font_size = 30
+	response_font_size = 23
+	caret_font_size = 34
+	
+	## RESPONSE BOXES ##
+	
+	boxes = []
+	
+	for i in range(10):
+	
+	    box_y = -300 + (i * 60)
+	    text_y = -280 + (i * 60)
+	
+	    boxes.append({
+	        'x': -512,
+	        'y': box_y,
+	
+	        'question_x': -544,
+	        'question_y': text_y,
+	
+	        'text_x': -466,
+	        'text_y': text_y,
+	
+	        'response_x': -365,
+	        'response_y': text_y
+	    })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	    box['question'] = str(number_list[i])
+	    box['answer_key'] = str(int(box['question']) + 3)
+	
+	## SHARED STATE ## 
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	
+	## MAIN LOOP
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update hover
+	    for box in boxes:
+	        box['hover'] = (
+	            box['x'] - box_w/2 - hover_padding_x
+	            <= mouse_x
+	            <= box['x'] + box_w/2 + hover_padding_x
+	            and
+	            box['y'] - box_h/2 - hover_padding_y
+	            <= mouse_y
+	            <= box['y'] + box_h/2 + hover_padding_y
+	        )
+	
+	    # mouse click
+	    if not submitted:
+	        buttons = my_mouse.get_pressed()
+	
+	        if buttons[0]:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	
+	            for i, box in enumerate(boxes):
+	
+	                if box['hover']:
+	
+	                    active_box = i
+	                    box['typing'] = True
+	
+	                    break
+	                
+	    # keyboard input
+	    key = None
+	
+	    if not submitted and active_box is not None:
+	        key, key_time = my_keyboard.get_key()
+	        box = boxes[active_box]
+	
+	        if key in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
+	            if len(box['number']) < max_digits:
+	                box['number'] += key
+	
+	        elif key == 'backspace':
+	            box['number'] = box['number'][:-1]
+	
+	        elif key in ['return', 'enter']:
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                else:
+	                    box['response'] = 'salah'
+	                box['typing'] = False
+	
+	            active_box = None
+	            submitted = True
+	
+	## ENTER AFTER FEEDBACK ##
+	    elif submitted:
+	        key, key_time = my_keyboard.get_key()
+	
+	        if key in ['return', 'enter']:
+	            break
+	
+	    # update colors 
+	    for box in boxes:
+	
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    # draw
+	    my_canvas.clear()
+	
+	    for box in boxes:
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=True
+	        )
+	
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=True
+	        )
+	
+	        if submitted:
+	
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=True
+	            )
+	
+	        if box['typing']:
+	            if (clock.time() // 500) % 2 == 0:
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 2
+	                else:
+	                    caret_x = (
+	                        box['text_x']
+	                        + 2
+	                        + (len(box['number']) * 13)
+	                    )
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 2,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=True
+	                )
+	
+	    my_canvas.show()
+	__end__
+	set _prepare ""
+
+define inline_script switch
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ###
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=0)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	hover_padding_x = 5
+	hover_padding_y = 7
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES ##
+	
+	boxes = []
+	
+	for box_x in [-275, -25, 225]:
+	
+	    for i in range(10):
+	        box_y = -300 + (i * 50)
+	        text_y = -280 + (i * 50)
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	    box['question'] = str(number_list[i])
+	
+	    if i % 2 == 0:
+	        box['answer_key'] = str(int(box['question']) + 3)
+	    else:
+	        box['answer_key'] = str(int(box['question']) - 3)
+	        
+	## SHARED STATE ## 
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	    
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = (
+	            box['x'] - box_w/2 - hover_padding_x
+	            <= mouse_x
+	            <= box['x'] + box_w/2 + hover_padding_x
+	
+	            and
+	
+	            box['y'] - box_h/2 - hover_padding_y
+	            <= mouse_y
+	            <= box['y'] + box_h/2 + hover_padding_y
+	        )
+	
+	
+	    # update button hover
+	    feedback_hover = (
+	
+	        feedback_x - button_w/2
+	        <= mouse_x
+	        <= feedback_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	    done_hover = (
+	
+	        done_x - button_w/2
+	        <= mouse_x
+	        <= done_x + button_w/2
+	        and
+	        button_y - button_h/2
+	        <= mouse_y
+	        <= button_y + button_h/2
+	
+	    )
+	
+	    ## MOUSE CLICK ##
+	
+	    buttons = my_mouse.get_pressed()
+	
+	    if buttons[0]:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	            
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	            
+	    ## KEYBOARD INPUT ##
+	
+	    key = None
+	    if not submitted and active_box is not None:
+	        key, key_time = my_keyboard.get_key()
+	        box = boxes[active_box]
+	
+	        # number input
+	        if key in [
+	            '0', '1', '2', '3', '4',
+	            '5', '6', '7', '8', '9'
+	        ]:
+	            if len(box['number']) < max_digits:
+	                # record only the first digit typed in this box
+	                if box['number'] == '':
+	                    answer_times[active_box] = clock.time() / 1000
+	                box['number'] += key
+	
+	        # backspace
+	        elif key == 'backspace':
+	            box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	    
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=True
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=True
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=True
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=True
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'black'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=True
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Main',
+	            task='switching',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define inline_script switch_fix
+	set description "Executes Python code"
+	___run__
+	## INITIALIZATION ###
+	
+	my_mouse = Mouse()
+	my_mouse.show_cursor(True)
+	my_keyboard = Keyboard(timeout=300)
+	my_canvas = Canvas()
+	
+	## SHARED SETTINGS ##
+	
+	box_w = 60
+	box_h = 40
+	
+	hover_padding_x = 5
+	hover_padding_y = 7
+	
+	max_digits = 2
+	
+	idle_color = '#C7B5E3'
+	hover_color = '#9DD9B8'
+	active_color = '#70C49A'
+	caret_color = '#D3D3D3'
+	
+	question_font_size = 29
+	input_font_size = 29
+	response_font_size = 22
+	caret_font_size = 33
+	
+	## BUTTON SETTINGS ##
+	
+	button_w = 192
+	button_h = 40
+	feedbackdone_y = 260
+	button_y = 240
+	feedback_x = -100
+	done_x = 100
+	buttonfeedback_x = -195
+	buttondone_x = 5
+	
+	button_color = 'white'
+	button_hover_color = '#6D6D6D'
+	button_font_size = 29
+	
+	## RESPONSE BOXES ##
+	
+	boxes = []
+	
+	for box_x in [-275, -25, 225]:
+	
+	    for i in range(10):
+	        box_y = -300 + (i * 50)
+	        text_y = -280 + (i * 50)
+	
+	        boxes.append({
+	
+	            'x': box_x,
+	            'y': box_y,
+	
+	            'question_x': box_x - 32,
+	            'question_y': text_y,
+	
+	            'text_x': box_x + 30,
+	            'text_y': text_y,
+	
+	            'response_x': box_x + 100,
+	            'response_y': text_y
+	
+	        })
+	
+	## QUESTION & KEY ANSWERS GENERATOR ##
+	
+	import random
+	
+	number_list = list(range(13, 96))
+	random.shuffle(number_list)
+	number_list = number_list[:len(boxes)]
+	
+	for i, box in enumerate(boxes):
+	    box['question'] = str(number_list[i])
+	
+	    if i % 2 == 0:
+	        box['answer_key'] = str(int(box['question']) + 3)
+	    else:
+	        box['answer_key'] = str(int(box['question']) - 3)
+	
+	## SHARED STATE ## 
+	
+	for box in boxes:
+	
+	    box['number'] = ''
+	    box['hover'] = False
+	    box['typing'] = False
+	    box['response'] = ''
+	    box['color'] = idle_color
+	    
+	## GLOBAL STATE ##
+	
+	active_box = None
+	submitted = False
+	feedback_hover = False
+	done_hover = False
+	feedback_clicked = False
+	done_clicked = False
+	prev_button_state = False
+	
+	## LOGGER STATE ##
+	
+	start_time = clock.time() / 1000
+	answer_times = [None] * len(boxes)
+	
+	
+	## HELPER: hitbox check (shared by boxes + buttons) ##
+	
+	def in_box(mx, my, cx, cy, w, h, pad_x=0, pad_y=0):
+	    return (
+	        cx - w/2 - pad_x <= mx <= cx + w/2 + pad_x
+	        and
+	        cy - h/2 - pad_y <= my <= cy + h/2 + pad_y
+	    )
+	
+	
+	## MAIN LOOP ##
+	
+	while True:
+	    # mouse position
+	    (mouse_x, mouse_y), mouse_time = my_mouse.get_pos()
+	
+	    # update box hover
+	    for box in boxes:
+	
+	        box['hover'] = in_box(
+	            mouse_x, mouse_y,
+	            box['x'], box['y'],
+	            box_w, box_h,
+	            hover_padding_x, hover_padding_y
+	        )
+	
+	    # update button hover
+	    feedback_hover = in_box(
+	        mouse_x, mouse_y,
+	        feedback_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    done_hover = in_box(
+	        mouse_x, mouse_y,
+	        done_x, button_y,
+	        button_w, button_h
+	    )
+	
+	    ## MOUSE CLICK (edge-triggered) ##
+	
+	    buttons = my_mouse.get_pressed()
+	    click = buttons[0] and not prev_button_state
+	    prev_button_state = buttons[0]
+	
+	    if click:
+	
+	        # FEEDBACK BUTTON
+	        if not submitted and feedback_hover:
+	
+	            accuracy = 0
+	
+	            for box in boxes:
+	                if box['number'] == box['answer_key']:
+	                    box['response'] = 'benar'
+	                    accuracy += 1
+	                else:
+	                    box['response'] = 'salah'        
+	        
+	                box['typing'] = False
+	
+	            feedback_clicked = True
+	            submitted = True
+	
+	        # DONE BUTTON
+	
+	        elif submitted and done_hover:
+	            end_time = clock.time() / 1000
+	            done_clicked = True
+	
+	        # RESPONSE BOX
+	
+	        elif not submitted:
+	            active_box = None
+	
+	            for box in boxes:
+	                box['typing'] = False
+	                
+	            for i, box in enumerate(boxes):
+	                if box['hover']:
+	                    active_box = i
+	                    box['typing'] = True
+	                    break
+	
+	    ## KEYBOARD INPUT ##
+	    # timeout=0 is non-blocking, so it's safe to drain every key
+	    # queued this frame instead of picking up just one.
+	
+	    keyboard_active = (active_box is not None) and (not submitted)
+	
+	    if keyboard_active:
+	        box = boxes[active_box]
+	
+	        while True:
+	
+	            key, key_time = my_keyboard.get_key()
+	
+	            if key is None:
+	                break
+	
+	            # number input
+	            if key in [
+	                '0', '1', '2', '3', '4',
+	                '5', '6', '7', '8', '9'
+	            ]:
+	                if len(box['number']) < max_digits:
+	                    # record only the first digit typed in this box
+	                    if box['number'] == '':
+	                        answer_times[active_box] = clock.time() / 1000
+	                    box['number'] += key
+	
+	            # backspace
+	            elif key == 'backspace':
+	                box['number'] = box['number'][:-1]
+	
+	    ## UPDATE BOX COLORS ##
+	    
+	    for box in boxes:
+	        if submitted:
+	            box['color'] = active_color
+	        elif box['typing']:
+	            box['color'] = active_color
+	        elif box['hover']:
+	            box['color'] = hover_color
+	        else:
+	            box['color'] = idle_color
+	
+	    ## DRAW ##
+	
+	    my_canvas.clear()
+	
+	    # QUESTION BOXES
+	
+	    for box in boxes:
+	        # question
+	        my_canvas.text(
+	            text=box['question'],
+	            center=True,
+	            x=box['question_x'],
+	            y=box['question_y'],
+	            color='white',
+	            font_family='sans',
+	            font_size=question_font_size,
+	            html=False
+	        )
+	
+	        # response box
+	        my_canvas.rect(
+	            x=box['x'],
+	            y=box['y'],
+	            w=box_w,
+	            h=box_h,
+	            color=box['color'],
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	        # typed number
+	        my_canvas.text(
+	            text=box['number'],
+	            center=True,
+	            x=box['text_x'],
+	            y=box['text_y'],
+	            color='#000000',
+	            font_family='sans',
+	            font_size=input_font_size,
+	            html=False
+	        )
+	
+	        # feedback
+	        if submitted:
+	            my_canvas.text(
+	                text=box['response'],
+	                center=True,
+	                x=box['response_x'],
+	                y=box['response_y'],
+	                color='white',
+	                font_family='sans',
+	                font_size=response_font_size,
+	                html=False
+	            )
+	
+	        # caret
+	        if box['typing']:
+	            if (clock.time() // 400) % 2 == 0:
+	
+	                if box['number'] == '':
+	                    caret_x = box['text_x'] + 3
+	                else:
+	                    text_width = len(box['number']) * 9
+	                    caret_x = box['text_x'] + text_width + 4
+	
+	                my_canvas.text(
+	                    text='|',
+	                    center=True,
+	                    x=caret_x,
+	                    y=box['text_y'] - 3,
+	                    color=caret_color,
+	                    font_family='sans',
+	                    font_size=caret_font_size,
+	                    html=False
+	                )
+	
+	    ## FEEDBACK BUTTON ##
+	
+	    if feedback_clicked:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif feedback_hover:
+	        my_canvas.rect(
+	            x=buttonfeedback_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttonfeedback_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	            text='FEEDBACK',
+	        center=True,
+	
+	        x=feedback_x,
+	        y=feedbackdone_y,
+	
+	    color=(
+	        'black'
+	        if feedback_clicked
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    ## DONE BUTTON ##
+	
+	    if done_clicked:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color='white',
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    elif done_hover:
+	        my_canvas.rect(
+	            x=buttondone_x,
+	            y=button_y,
+	            w=button_w,
+	            h=button_h,
+	            color=button_hover_color,
+	            fill=True,
+	            penwidth=1
+	        )
+	
+	    # button stroke
+	    my_canvas.rect(
+	        x=buttondone_x,
+	        y=button_y,
+	        w=button_w,
+	        h=button_h,
+	        color='white',
+	        fill=False,
+	        penwidth=2
+	    )
+	
+	    my_canvas.text(
+	
+	        text='DONE',
+	        center=True,
+	    
+	        x=done_x,
+	        y=feedbackdone_y,
+	    
+	        color=(
+	        'black'
+	        if done_clicked and submitted
+	        else button_color
+	    ),
+	        font_family='sans',
+	        font_size=button_font_size,
+	        html=False
+	    )
+	
+	    # SHOW FRAME
+	    my_canvas.show()
+	
+	    ## THROTTLE WHEN KEYBOARD ISN'T ACTIVE ##
+	    if not keyboard_active:
+	        clock.sleep(8)
+	
+	    if done_clicked:
+	
+	        log_block(
+	            start_time=start_time,
+	            procedure='Main',
+	            task='switch',
+	            numbers=[box['question'] for box in boxes],
+	            answers=[box['number'] for box in boxes],
+	            answer_times=answer_times,
+	            accuracy=accuracy,
+	            end_time=end_time
+	        )
+	
+	        break
+	__end__
+	set _prepare ""
+
+define sketchpad ui_prototype
+	# no 1
+	# no 2
+	set start_response_interval no
+	set reset_variables no
+	set duration keypress
+	set description "Displays stimuli"
+	draw rect color="#aaaaff" fill=1 h=44 penwidth=1 show_if=True w=95 x=-384 y=-300 z_index=0
+	draw textline center=1 color=white font_bold=no font_family=sans font_italic=no font_size=32 html=yes show_if=True text=67 x=-416 y=-280 z_index=0
+	draw textline center=1 color=white font_bold=no font_family=sans font_italic=no font_size=25 html=yes show_if=True text=correct x=-237 y=-280 z_index=0
+	draw textline center=1 color="#000000" font_bold=no font_family=sans font_italic=no font_size=32 html=yes show_if=True text=76 x=-338 y=-280 z_index=0
+	draw rect color="#aaaaff" fill=1 h=44 penwidth=1 show_if=True w=95 x=-384 y=-200 z_index=0
+	draw textline center=1 color=white font_bold=no font_family=sans font_italic=no font_size=32 html=yes show_if=True text=67 x=-416 y=-180 z_index=0
+	draw textline center=1 color=white font_bold=no font_family=sans font_italic=no font_size=25 html=yes show_if=True text=correct x=-237 y=-180 z_index=0
+	draw textline center=1 color="#000000" font_bold=no font_family=sans font_italic=no font_size=32 html=yes show_if=True text=76 x=-338 y=-180 z_index=0
+	draw textline center=1 color="#aaaaff" font_bold=no font_family=sans font_italic=no font_size=27 html=yes show_if=True text=40 x=-416 y=-96 z_index=0
+	draw textline center=1 color="#aaaaff" font_bold=no font_family=mono font_italic=no font_size=21 html=yes show_if=True text="" x=-416 y=-96 z_index=0
+	draw textline center=1 color="#aaaaff" font_bold=no font_family=mono font_italic=no font_size=21 html=yes show_if=True text="" x=-416 y=-96 z_index=0
+	draw rect color="#aaaaff" fill=1 h=35 penwidth=1 show_if=True w=55 x=-390 y=-114 z_index=0
+	draw textline center=1 color="#aaaaff" font_bold=no font_family=sans font_italic=no font_size=20 html=yes show_if=True text=correct x=-289 y=-96 z_index=0
+	draw textline center=1 color="#000000" font_bold=no font_family=sans font_italic=no font_size=27 html=yes show_if=True text=25 x=-363 y=-96 z_index=0
+	draw rect color=white fill=0 h=-64 penwidth=1 show_if=True w=-192 x=-32 y=320 z_index=0
+	draw rect color=white fill=0 h=64 penwidth=1 show_if=True w=192 x=32 y=256 z_index=0
+	draw textline center=1 color=white font_bold=no font_family=mono font_italic=no font_size=29 html=yes show_if=True text=FEEDBACK x=-128 y=288 z_index=0
+	draw textline center=1 color=white font_bold=no font_family=mono font_italic=no font_size=29 html=yes show_if=True text=DONE x=128 y=288 z_index=0
+
